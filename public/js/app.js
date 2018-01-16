@@ -8,7 +8,8 @@ class CurrencyDataLoader{
 		this.nameData = undefined;
 		// this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG","ETC","QTUM","ICX","LSK","XRB","OMG","ARDR","STRAT","BNB","ZEC","SC","BCN","PPT","XVG","VEN","BCC","USDT","SNT","STEEM","BTS","KCS","DOGE","WAVES","REP","ZRX","KMD","DGB","GNT","VERI","SMART","QASH","GAS","DRGN","ETN","ARK","WAX","HSR","DCN","BAT","DCR","PIVX","LRC","KNC","ZCL","WTC","SALT","GBYTE","AION","FUN","BTM","FCT","DENT","ETHOS","MONA","XP","MAID","GXS","AE","POWR","SUB","SYS","RDD","NXT","RHOC","MED","REQ","ENG","NXS","KIN","DGD","GAME","NAS","PART","BNT","PAY","GNO","XZC","ICN","ELF","CVC","XDN","EMC","LINK","COB","BTX"];
 		// this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG","ETC","QTUM","ICX","LSK","XRB","OMG","ARDR","STRAT","BNB","ZEC","SC","BCN","PPT","XVG","VEN","BCC","USDT","SNT","STEEM","BTS","KCS","DOGE","WAVES","REP","ZRX","KMD","DGB","GNT","VERI","SMART","QASH","GAS","DRGN","ETN","ARK","WAX","HSR","DCN","BAT","DCR","PIVX","LRC","KNC","ZCL","WTC","SALT","GBYTE","AION","FUN","BTM","FCT","DENT","ETHOS","MONA","XP","MAID"];
-		this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG","ETC","QTUM","ICX","LSK","XRB","OMG","ARDR","STRAT","BNB","ZEC","SC","BCN","PPT","XVG","VEN"];
+		this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG","ETC","QTUM","ICX","LSK","XRB","OMG","ARDR","STRAT","BNB","ZEC","SC","BCN","PPT","XVG","VEN","BCC","USDT","SNT","STEEM","BTS","KCS","DOGE","WAVES","REP","ZRX","KMD","DGB","GNT","VERI","SMART","QASH","GAS","DRGN"];
+		// this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG","ETC","QTUM","ICX","LSK","XRB","OMG","ARDR","STRAT","BNB","ZEC","SC","BCN","PPT","XVG","VEN"];
 		// this.topCoins = ["BTC","ETH","XRP","BCH","ADA","LTC","XEM","NEO","XLM","MIOTA","EOS","DASH","XMR","TRX","BTG"];
 	}
 
@@ -18,10 +19,9 @@ class CurrencyDataLoader{
 	}
 
 	// TODO: top coins as of Jan 15, 2017 from https://coinmarketcap.com/all/views/all/
-
 	getCoinList(){
 		var self = this;
-		var coinNames = [];
+		var coinData = {};
 		cc.coinList().then( response => {
 			self.nameData = response.Data;
 			for(var n in response.Data){
@@ -31,34 +31,47 @@ class CurrencyDataLoader{
 					for( var i=0; i<self.topCoins.length; i++ ){
 						var n2 = self.topCoins[i];
 						// if the top coin names match the cc database coins, add them to price fetch list
-						if( n == n2 ) coinNames.push(n);
+						if( n == n2 ) coinData[n] = {
+							name: response.Data[n].Name,
+							symbol: n,
+							price: 0
+						};
 					}
 				}
 			}
-			// console.log(coinNames)
-			self.getPrices(coinNames);
-
-			self.displayPrices(coinNames)
+			self.getPrices(coinData);
 		});	
 	}
 
-	getPrices(coinNames){
+
+	getPrices(coinData){
 		var self = this;
+		var coinNames = [];
+		for(var n in coinData) coinNames.push(n);
 		// fetch the prices for coins by name
 		cc.priceMulti(coinNames, ["USD", "EUR"]).then( response => {
 			// respond to the application with the data loaded...
+			// console.log(response);
+			for(var r in response){
+				for(var c in coinData){
+					if( r == c ){
+						coinData[c].price = response[r].USD;
+					}
+				}
+			}
+			//
+			self.displayPrices(coinData);
+			// callback for this class
 			self.callbackFunc.call(self, response);
 		});
 	}
 
-	displayPrices(coinNames){
-
+	displayPrices(coinData){
 		var h = '';
-		for(var i=0; i<coinNames.length; i++){
-			var o = this.nameData[coinNames[i]];
-			h += '<div>'+(i+1)+': '+o.CoinName+"</div>";
+		for(var n in coinData){
+			// var o = this.nameData[coinNames[i]];
+			h += '<div id="'+n+'">'+coinData[n].name+" - $"+coinData[n].price+"</div>";
 		}
-
 		$("#coinlist").empty().append(h);
 	}
 }
@@ -107,7 +120,9 @@ class CurrencyGroup extends THREE.Group{
 		}
 
 		// console.log( getRandomColor("#d2164f", "#8f19b7") );
+    // console.log(Object.keys(prices).length)
 
+    // var maxSize = 10;
     var maxSize = 10;
     var minSize = 3;
     var i=minSize;
@@ -124,10 +139,12 @@ class CurrencyGroup extends THREE.Group{
 
       // var radius = scaledSize;
       var radius = i + (scaledSize*0.5);
+      // var radius = i + (scaledSize*0.1);
 
       // var radius = i +( maxSize - (modifier*priceRatio*8000) );
-	  	var geometry = new THREE.TorusGeometry( radius, 0.03, 5, 100 );
-			// var material = new THREE.MeshBasicMaterial( {color: randomColor, wireframe:true} );
+      // var geometry = new THREE.TorusGeometry( radius, 0.03, 5, 100 );
+      var geometry = new THREE.TorusGeometry( radius, 0.02, 5, 100 );
+			// var material = new THREE.MeshBasicMaterial( {color: color, wireframe:true} );
 			var material = new THREE.MeshBasicMaterial( {color: color} );
 			var mesh = new THREE.Mesh( geometry, material );
 
@@ -137,7 +154,7 @@ class CurrencyGroup extends THREE.Group{
 			this.objects.push( mesh );
 			this.add( mesh );
 
-			i+=0.25;
+			i+=0.15;
    	}
   }
 
@@ -151,15 +168,26 @@ class CurrencyGroup extends THREE.Group{
 }
 module.exports = CurrencyGroup;
 },{"three":37}],3:[function(require,module,exports){
+const $ = require('jquery');
 const THREE = require('three');
 
 class SceneManager {
-	constructor(){
+  constructor(){
     this.objects = [];
     this.createScene();
-	}
 
-	createScene(){
+    $(window).resize(() => {
+      this.resize( $(window).width(), $(window).height() );
+    })
+  }
+
+  resize(w,h){
+    this.camera.aspect = w / h;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(w, h);
+  }
+
+  createScene(){
     this.scene = new THREE.Scene();
 
     this.scene.fog = new THREE.FogExp2(0x151d1e, 0.04);
@@ -178,9 +206,9 @@ class SceneManager {
     document.body.appendChild(this.renderer.domElement);
 
     this.render();
-	}
+  }
 
-	render(){
+  render(){
     requestAnimationFrame(() => {
       this.render();
     });
@@ -192,16 +220,16 @@ class SceneManager {
     });
     
     this.renderer.render(this.scene, this.camera);
-	}
+  }
 
-	add(mesh){
+  add(mesh){
     this.objects.push(mesh);
     // this.scene.add(mesh.getMesh());
     this.scene.add(mesh);
-	}
+  }
 }
 module.exports = SceneManager;
-},{"three":37}],4:[function(require,module,exports){
+},{"jquery":30,"three":37}],4:[function(require,module,exports){
 (function (global){
 global.fetch = require('node-fetch');
 
